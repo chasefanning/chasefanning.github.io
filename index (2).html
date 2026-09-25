@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>College Tier List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Graduate&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dde3ea; --ink:#16202c; --muted:#546170; --panel:#f4f6f9; --line:#c2cbd5;
+  --board:#1b2028; --row:#262c36; --row-hover:#2f3743; --accent:#0b5cad; --accent-ink:#fff;
+  --danger:#b3261e;
+  --display:"Graduate","Rockwell","Georgia",serif;
+  --body:"Barlow","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --tile:76px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f141b; --ink:#e7ecf2; --muted:#9aa6b4; --panel:#171e27; --line:#2a3542;
+    --board:#0a0d11; --row:#151a21; --row-hover:#1d242d; --accent:#6aa9ec; --accent-ink:#0b1420;
+    --danger:#f2867f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --ink:#e7ecf2; --muted:#9aa6b4; --panel:#171e27; --line:#2a3542;
+  --board:#0a0d11; --row:#151a21; --row-hover:#1d242d; --accent:#6aa9ec; --accent-ink:#0b1420;
+  --danger:#f2867f;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 28px;margin-bottom:22px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(2rem,5.2vw,3.5rem);line-height:1;margin:0 0 10px;letter-spacing:.01em}
+.lede{margin:0;color:var(--muted);max-width:56ch}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:600 .95rem var(--body);border-radius:8px;padding:9px 14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{color:var(--danger)}
+button:disabled{opacity:.55;cursor:progress}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.status{font-size:.85rem;color:var(--muted);min-width:9ch}
+
+/* Board */
+.board{background:var(--board);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px}
+.tier{display:flex;min-height:calc(var(--tile) + 12px);background:var(--row);border-radius:6px;overflow:hidden}
+.tier.over{background:var(--row-hover);box-shadow:inset 0 0 0 2px var(--accent)}
+.tier-label{flex:0 0 84px;display:grid;place-items:center;font-family:var(--display);font-size:2.4rem;color:#1a1a1a;cursor:pointer;user-select:none}
+.tier-items{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:6px;min-width:0}
+
+/* Tiles */
+.tile{
+  position:relative;width:var(--tile);height:var(--tile);flex:0 0 auto;border-radius:6px;
+  background:var(--c1);color:var(--fg);border-bottom:5px solid var(--c2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
+  box-shadow:0 1px 0 rgba(0,0,0,.25)
+}
+.tile .abbr{font-family:var(--display);font-size:15px;line-height:1;white-space:nowrap;max-width:94%;overflow:hidden}
+.tile .tag{font-size:10px;font-weight:600;line-height:1;padding:3px 5px;border-radius:3px;background:rgba(0,0,0,.28);white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.tile.lightbg .tag{background:rgba(255,255,255,.5)}
+.tile.selected{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 6px var(--accent)}
+.tile.dragging{display:none}
+.tile .del{position:absolute;top:2px;right:2px;width:18px;height:18px;padding:0;border:0;border-radius:50%;font:700 13px/18px var(--body);background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center}
+.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;cursor:grabbing;box-shadow:0 12px 28px rgba(0,0,0,.4);transform-origin:center}
+.placeholder{width:var(--tile);height:var(--tile);border-radius:6px;border:2px dashed rgba(255,255,255,.55);flex:0 0 auto}
+body.is-dragging{cursor:grabbing}
+
+/* Pool */
+.pool{margin-top:26px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.pool.over{box-shadow:inset 0 0 0 2px var(--accent)}
+.pool-head{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pool-head h2{font-family:var(--display);font-weight:400;font-size:1.5rem;margin:0;line-height:1.1}
+.count{color:var(--muted);font-size:.9rem;margin:4px 0 0}
+input[type=search],input[type=text]{font:500 1rem var(--body);padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-width:0}
+.search{width:min(280px,100%)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{font:600 .85rem var(--body);padding:6px 11px;border-radius:999px;background:transparent}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip small{font-weight:500;opacity:.7;margin-left:4px}
+.pool-items{display:flex;flex-wrap:wrap;gap:6px;min-height:calc(var(--tile) + 8px);padding:4px}
+.empty{color:var(--muted);margin:10px 4px}
+.hint{font-size:.88rem;color:var(--muted);margin:18px 2px 0;max-width:80ch}
+kbd{font:600 .8rem var(--body);border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--panel)}
+
+/* Dialogs */
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:22px;width:min(440px,92vw)}
+dialog::backdrop{background:rgba(5,10,18,.55)}
+dialog h3{font-family:var(--display);font-weight:400;font-size:1.4rem;margin:0 0 14px}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-weight:600;font-size:.9rem}
+.field .note{font-size:.8rem;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type=color]{width:100%;height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:3px}
+.preview-wrap{display:flex;align-items:center;gap:12px;margin:4px 0 16px;color:var(--muted);font-size:.9rem}
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.err{color:var(--danger);font-size:.85rem;min-height:1.2em;margin:0 0 6px}
+#imgDialog{width:min(900px,94vw)}
+#imgDialog img{max-width:100%;border-radius:6px;display:block;margin-bottom:10px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;transition:opacity .2s,transform .2s;pointer-events:none;z-index:60;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:640px){
+  :root{--tile:62px}
+  .wrap{padding:18px 12px 48px}
+  .tier-label{flex-basis:52px;font-size:1.8rem}
+  .tile .abbr{font-size:12.5px}
+  .tile .tag{font-size:8.5px;padding:2px 4px}
+}
+@media (prefers-reduced-motion: reduce){ .toast{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>College Tier List</h1>
+      <p class="lede">Drag schools from the pool into tiers, S at the top down to F. Your ranking saves in this browser automatically.</p>
+    </div>
+    <div class="toolbar">
+      <span class="status" id="status" aria-live="polite"></span>
+      <button id="addBtn">Add a school</button>
+      <button id="dlBtn" class="primary">Download image</button>
+      <button id="resetBtn" class="danger">Reset</button>
+    </div>
+  </header>
+
+  <section class="board" id="board" aria-label="Tier rows"></section>
+
+  <section class="pool" id="pool" aria-label="Unranked schools">
+    <div class="pool-head">
+      <div>
+        <h2>Unranked schools</h2>
+        <p class="count" id="count"></p>
+      </div>
+      <input type="search" class="search" id="search" placeholder="Search schools" aria-label="Search schools">
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter by conference"></div>
+    <div class="pool-items" id="poolItems" data-drop="pool"></div>
+    <p class="hint">On a phone, press and hold a school to drag it, or tap a school and then tap a tier. With a keyboard, focus a school and press <kbd>S</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> or <kbd>F</kbd> to place it, or <kbd>0</kbd> to send it back.</p>
+  </section>
+</div>
+
+<dialog id="addDialog">
+  <form method="dialog" id="addForm">
+    <h3>Add a school</h3>
+    <div class="field">
+      <label for="fName">School name</label>
+      <input type="text" id="fName" maxlength="60" placeholder="University of Rhode Island" required>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="fAbbr">Short name</label>
+        <input type="text" id="fAbbr" maxlength="6" placeholder="URI" required>
+        <span class="note">Up to 6 letters</span>
+      </div>
+      <div class="field">
+        <label for="fConf">Conference</label>
+        <input type="text" id="fConf" maxlength="12" placeholder="Custom">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="fC1">Main color</label><input type="color" id="fC1" value="#1e5aa8"></div>
+      <div class="field"><label for="fC2">Stripe color</label><input type="color" id="fC2" value="#f2b705"></div>
+    </div>
+    <div class="preview-wrap"><div id="preview"></div><span>Preview</span></div>
+    <p class="err" id="addErr" role="alert"></p>
+    <div class="actions">
+      <button type="button" id="addCancel">Cancel</button>
+      <button type="submit" class="primary">Add school</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="resetDialog">
+  <h3>Reset rankings?</h3>
+  <p>Every school moves back to the unranked pool. Schools you added stay.</p>
+  <div class="actions">
+    <button type="button" id="resetCancel">Cancel</button>
+    <button type="button" class="primary" id="resetConfirm">Reset rankings</button>
+  </div>
+</dialog>
+
+<dialog id="imgDialog">
+  <h3>Your tier list</h3>
+  <img id="imgOut" alt="Your college tier list">
+  <p class="count">Right-click or press and hold the image to save it.</p>
+  <div class="actions"><button type="button" id="imgClose">Close</button></div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+
+const KEY = "college-tier-list-v1";
+const TIERS = [
+  {k:"S", c:"#ff7f7f"}, {k:"A", c:"#ffbf7f"}, {k:"B", c:"#ffdf7f"},
+  {k:"C", c:"#ffff7f"}, {k:"D", c:"#bfff7f"}, {k:"F", c:"#7fbfff"}
+];
+
+// [short name, full name, conference, main color, stripe color]
+const BASE = [
+  // SEC
+  ["ALA","Alabama","SEC","#9E1B32","#FFFFFF"],["AUB","Auburn","SEC","#0C2340","#E87722"],
+  ["UGA","Georgia","SEC","#BA0C2F","#000000"],["UF","Florida","SEC","#0021A5","#FA4616"],
+  ["LSU","LSU","SEC","#461D7C","#FDD023"],["UK","Kentucky","SEC","#0033A0","#FFFFFF"],
+  ["TENN","Tennessee","SEC","#FF8200","#FFFFFF"],["MIZ","Missouri","SEC","#F1B82D","#000000"],
+  ["ARK","Arkansas","SEC","#9D2235","#FFFFFF"],["MISS","Ole Miss","SEC","#CE1126","#14213D"],
+  ["MSST","Mississippi State","SEC","#660000","#FFFFFF"],["SCAR","South Carolina","SEC","#73000A","#000000"],
+  ["VAN","Vanderbilt","SEC","#1C1C1C","#CFAE70"],["TAMU","Texas A&M","SEC","#500000","#FFFFFF"],
+  ["TEX","Texas","SEC","#BF5700","#FFFFFF"],["OU","Oklahoma","SEC","#841617","#FDF9D8"],
+  // Ivy League
+  ["HARV","Harvard","Ivy","#A51C30","#1E1E1E"],["YALE","Yale","Ivy","#00356B","#FFFFFF"],
+  ["PRIN","Princeton","Ivy","#E77500","#000000"],["COLU","Columbia","Ivy","#B9D9EB","#1D4F91"],
+  ["PENN","Penn","Ivy","#011F5B","#990000"],["BRWN","Brown","Ivy","#4E3629","#ED1C24"],
+  ["DART","Dartmouth","Ivy","#00693E","#FFFFFF"],["CORN","Cornell","Ivy","#B31B1B","#FFFFFF"],
+  // Big Ten
+  ["OSU","Ohio State","Big Ten","#BB0000","#666666"],["MICH","Michigan","Big Ten","#00274C","#FFCB05"],
+  ["PSU","Penn State","Big Ten","#041E42","#FFFFFF"],["MSU","Michigan State","Big Ten","#18453B","#FFFFFF"],
+  ["WIS","Wisconsin","Big Ten","#C5050C","#FFFFFF"],["IOWA","Iowa","Big Ten","#1C1C1C","#FFCD00"],
+  ["MINN","Minnesota","Big Ten","#7A0019","#FFCC33"],["NEB","Nebraska","Big Ten","#E41C38","#FFFFFF"],
+  ["ILL","Illinois","Big Ten","#13294B","#E84A27"],["NW","Northwestern","Big Ten","#4E2A84","#FFFFFF"],
+  ["PUR","Purdue","Big Ten","#CEB888","#000000"],["IU","Indiana","Big Ten","#990000","#EEEDEB"],
+  ["UMD","Maryland","Big Ten","#E21833","#FFD200"],["RUTG","Rutgers","Big Ten","#CC0033","#5F6A72"],
+  ["USC","USC","Big Ten","#990000","#FFC72C"],["UCLA","UCLA","Big Ten","#2D68C4","#F2A900"],
+  ["ORE","Oregon","Big Ten","#154733","#FEE123"],["UW","Washington","Big Ten","#4B2E83","#B7A57A"],
+  // ACC
+  ["MIA","Miami","ACC","#005030","#F47321"],["FSU","Florida State","ACC","#782F40","#CEB888"],
+  ["CLEM","Clemson","ACC","#F56600","#522D80"],["UNC","North Carolina","ACC","#7BAFD4","#13294B"],
+  ["DUKE","Duke","ACC","#003087","#FFFFFF"],["UVA","Virginia","ACC","#232D4B","#F84C1E"],
+  ["VT","Virginia Tech","ACC","#630031","#CF4420"],["ND","Notre Dame","ACC","#0C2340","#C99700"],
+  ["GT","Georgia Tech","ACC","#B3A369","#003057"],["BC","Boston College","ACC","#98002E","#BC9B6A"],
+  ["SYR","Syracuse","ACC","#F76900","#000E54"],["PITT","Pittsburgh","ACC","#003594","#FFB81C"],
+  ["LOU","Louisville","ACC","#AD0000","#000000"],["WAKE","Wake Forest","ACC","#9E7E38","#000000"],
+  ["NCSU","NC State","ACC","#CC0000","#FFFFFF"],["STAN","Stanford","ACC","#8C1515","#FFFFFF"],
+  ["CAL","California","ACC","#003262","#FDB515"],["SMU","SMU","ACC","#0033A0","#C8102E"],
+  // Big 12
+  ["BYU","BYU","Big 12","#002E5D","#FFFFFF"],["BAY","Baylor","Big 12","#154734","#FFB81C"],
+  ["TCU","TCU","Big 12","#4D1979","#A3A9AC"],["TTU","Texas Tech","Big 12","#CC0000","#000000"],
+  ["KU","Kansas","Big 12","#0051BA","#E8000D"],["KSU","Kansas State","Big 12","#512888","#FFFFFF"],
+  ["ISU","Iowa State","Big 12","#C8102E","#F1BE48"],["OKST","Oklahoma State","Big 12","#FF7300","#000000"],
+  ["WVU","West Virginia","Big 12","#002855","#EAAA00"],["CIN","Cincinnati","Big 12","#E00122","#000000"],
+  ["HOU","Houston","Big 12","#C8102E","#FFFFFF"],["UCF","UCF","Big 12","#1C1C1C","#BA9B37"],
+  ["ARIZ","Arizona","Big 12","#CC0033","#003366"],["ASU","Arizona State","Big 12","#8C1D40","#FFC627"],
+  ["UTAH","Utah","Big 12","#CC0000","#FFFFFF"],["COLO","Colorado","Big 12","#CFB87C","#000000"],
+  // Big East
+  ["UCON","UConn","Big East","#000E2F","#E4002B"],["NOVA","Villanova","Big East","#00205B","#13B5EA"],
+  ["GTWN","Georgetown","Big East","#041E42","#8D817B"],["MARQ","Marquette","Big East","#003366","#FFCC00"],
+  ["CREI","Creighton","Big East","#005CA9","#FFFFFF"],["XAV","Xavier","Big East","#0C2340","#9EA2A2"],
+  ["PROV","Providence","Big East","#1C1C1C","#A2AAAD"],["SJU","St. John's","Big East","#BA0C2F","#FFFFFF"],
+  ["BUTL","Butler","Big East","#13294B","#FFFFFF"],["DEP","DePaul","Big East","#005EB8","#E4002B"],
+  // Pac-12
+  ["ORST","Oregon State","Pac-12","#DC4405","#000000"],["WSU","Washington State","Pac-12","#981E32","#5E6A71"],
+  ["BSU","Boise State","Pac-12","#0033A0","#D64309"],["SDSU","San Diego State","Pac-12","#A6192E","#000000"],
+  ["FRES","Fresno State","Pac-12","#DB0032","#13284C"],["CSU","Colorado State","Pac-12","#1E4D2B","#C8C372"],
+  ["USU","Utah State","Pac-12","#0F2439","#8A8D8F"],["GONZ","Gonzaga","Pac-12","#041E42","#C8102E"],
+  ["TXST","Texas State","Pac-12","#501214","#8D734A"],
+  // Mid-majors: Atlantic 10
+  ["DAY","Dayton","A-10","#CE1141","#004B8D"],["VCU","VCU","A-10","#1C1C1C","#FFB300"],
+  ["SLU","Saint Louis","A-10","#003DA5","#FFFFFF"],["RICH","Richmond","A-10","#990000","#000066"],
+  ["DAV","Davidson","A-10","#AC1A2F","#000000"],["GW","George Washington","A-10","#033C5A","#AA9868"],
+  ["FORD","Fordham","A-10","#860038","#FFFFFF"],["URI","Rhode Island","A-10","#75B2DD","#002147"],
+  // American
+  ["MEM","Memphis","AAC","#003087","#898D8D"],["TUL","Tulane","AAC","#006747","#418FDE"],
+  ["RICE","Rice","AAC","#00205B","#C1C6C8"],["USF","South Florida","AAC","#006747","#CFC493"],
+  ["NAVY","Navy","AAC","#00205B","#C5B783"],["ARMY","Army","AAC","#1C1C1C","#D3BC8D"],
+  ["UAB","UAB","AAC","#1E6B52","#F4C300"],["TEMP","Temple","AAC","#9D2235","#FFFFFF"],
+  ["UNT","North Texas","AAC","#00853E","#FFFFFF"],["FAU","Florida Atlantic","AAC","#003366","#CC0000"],
+  ["ECU","East Carolina","AAC","#592A8A","#FDC82F"],["UTSA","UTSA","AAC","#0C2340","#F15A22"],
+  ["CLT","Charlotte","AAC","#005035","#A49665"],["WICH","Wichita State","AAC","#FFC217","#000000"],
+  // Mountain West
+  ["UNLV","UNLV","MWC","#CF0A2C","#666666"],["AFA","Air Force","MWC","#003087","#8A8D8F"],
+  ["NEV","Nevada","MWC","#003366","#807F84"],["UNM","New Mexico","MWC","#BA0C2F","#63666A"],
+  ["WYO","Wyoming","MWC","#492F24","#FFC425"],["HAW","Hawai'i","MWC","#024731","#FFFFFF"],
+  ["GCU","Grand Canyon","MWC","#522398","#FFFFFF"],
+  // West Coast
+  ["SMC","Saint Mary's","WCC","#D80024","#06315B"],["SCU","Santa Clara","WCC","#862633","#FFFFFF"],
+  ["USD","San Diego","WCC","#002855","#75BEE9"],["LMU","Loyola Marymount","WCC","#00346C","#AB0C2F"],
+  ["PEPP","Pepperdine","WCC","#00205B","#EE7624"],
+  // Missouri Valley
+  ["DRKE","Drake","MVC","#004477","#FFFFFF"],["BRAD","Bradley","MVC","#A50000","#FFFFFF"],
+  ["ILST","Illinois State","MVC","#CE1126","#F9DD16"],["UNI","Northern Iowa","MVC","#4B116F","#FFCC00"],
+  ["BEL","Belmont","MVC","#002469","#C8102E"],["MOSU","Missouri State","MVC","#5E0009","#FFFFFF"],
+  // Sun Belt
+  ["APP","App State","Sun Belt","#222222","#FFCC00"],["CCU","Coastal Carolina","Sun Belt","#006F71","#A27752"],
+  ["JMU","James Madison","Sun Belt","#450084","#CBB677"],["GASO","Georgia Southern","Sun Belt","#011E41","#87714D"],
+  ["ODU","Old Dominion","Sun Belt","#003057","#7C878E"],["MRSH","Marshall","Sun Belt","#00B140","#FFFFFF"],
+  ["TROY","Troy","Sun Belt","#8A2432","#B3B5B8"],["ULL","Louisiana","Sun Belt","#CE181E","#0A0203"],
+  // MAC
+  ["TOL","Toledo","MAC","#15397F","#FFDA00"],["MIOH","Miami (OH)","MAC","#C3142D","#FFFFFF"],
+  ["OHIO","Ohio","MAC","#00694E","#FFFFFF"],["KENT","Kent State","MAC","#002664","#EAAB00"],
+  ["WMU","Western Michigan","MAC","#6C4023","#B5A167"],["BALL","Ball State","MAC","#BA0C2F","#FFFFFF"],
+  // Conference USA
+  ["LIB","Liberty","CUSA","#0A254E","#C41230"],["WKU","Western Kentucky","CUSA","#C60C30","#000000"],
+  ["MTSU","Middle Tennessee","CUSA","#0066CC","#000000"],["FIU","FIU","CUSA","#081E3F","#B6862C"],
+  ["NMSU","New Mexico State","CUSA","#8C0B42","#FFFFFF"],
+  // Academic powerhouses
+  ["MIT","MIT","NEWMAC","#A31F34","#8A8B8C"],["CALT","Caltech","SCIAC","#FF6C0C","#FFFFFF"],
+  ["UCHI","UChicago","UAA","#800000","#FFFFFF"],["WASHU","WashU","UAA","#A51417","#007360"],
+  ["NYU","NYU","UAA","#57068C","#FFFFFF"],["EMRY","Emory","UAA","#012169","#F2A900"],
+  ["CMU","Carnegie Mellon","UAA","#C41230","#000000"],["JHU","Johns Hopkins","Centennial","#002D72","#68ACE5"],
+  ["ROCH","Rochester","UAA","#001E5F","#FFD100"],["CWRU","Case Western","UAA","#0A304E","#626262"],
+  ["BRAN","Brandeis","UAA","#003478","#FFFFFF"],["TUFT","Tufts","NESCAC","#3E8EDE","#512D1C"],
+  ["WILL","Williams","NESCAC","#500082","#FFBE0A"],["AMH","Amherst","NESCAC","#3F1F69","#FFFFFF"]
+];
+
+const GROUPS = ["SEC","Big Ten","ACC","Big 12","Ivy League","Big East","Pac-12","Mid-Major","Academic"];
+const GROUP_OF = {
+  "SEC":"SEC","Big Ten":"Big Ten","ACC":"ACC","Big 12":"Big 12","Ivy":"Ivy League","Big East":"Big East","Pac-12":"Pac-12",
+  "A-10":"Mid-Major","AAC":"Mid-Major","MWC":"Mid-Major","WCC":"Mid-Major","MVC":"Mid-Major","Sun Belt":"Mid-Major","MAC":"Mid-Major","CUSA":"Mid-Major",
+  "UAA":"Academic","NESCAC":"Academic","NEWMAC":"Academic","SCIAC":"Academic","Centennial":"Academic"
+};
+
+// ---------- state ----------
+function freshState(){ const t={}; TIERS.forEach(x=>t[x.k]=[]); return {tiers:t, custom:[]}; }
+function loadState(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(s && s.tiers){
+        const f = freshState();
+        TIERS.forEach(x=>{ f.tiers[x.k] = Array.isArray(s.tiers[x.k]) ? s.tiers[x.k].filter(v=>typeof v==="string") : []; });
+        f.custom = Array.isArray(s.custom) ? s.custom.filter(c=>c && c.id && c.name && c.abbr) : [];
+        return f;
+      }
+    }
+  }catch(e){}
+  return freshState();
+}
+let state = loadState();
+let canSave = true;
+
+let schools = [], byId = new Map();
+function rebuildSchools(){
+  schools = BASE.map(r=>({id:"s-"+r[0].toLowerCase(), abbr:r[0], name:r[1], conf:r[2], c1:r[3], c2:r[4], group:GROUP_OF[r[2]]||"Mid-Major", custom:false}));
+  state.custom.forEach(c=>schools.push({id:c.id, abbr:c.abbr, name:c.name, conf:c.conf||"Custom", c1:c.c1||"#1e5aa8", c2:c.c2||"#f2b705", group:"Custom", custom:true}));
+  byId = new Map(schools.map(s=>[s.id,s]));
+  // drop unknown or duplicate ids from tiers
+  const seen = new Set();
+  TIERS.forEach(x=>{ state.tiers[x.k] = state.tiers[x.k].filter(id=>{ if(!byId.has(id)||seen.has(id)) return false; seen.add(id); return true; }); });
+}
+rebuildSchools();
+
+const statusEl = document.getElementById("status");
+let statusTimer;
+function persist(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); canSave = true;
+    statusEl.textContent = "Saved"; clearTimeout(statusTimer); statusTimer=setTimeout(()=>statusEl.textContent="",1600);
+  }catch(e){ canSave=false; statusEl.textContent = "Not saving: storage is blocked"; }
+}
+
+function tierOf(id){ for(const x of TIERS){ if(state.tiers[x.k].includes(id)) return x.k; } return null; }
+function moveTo(id, tier, index){
+  TIERS.forEach(x=>{ const a=state.tiers[x.k]; const i=a.indexOf(id); if(i>-1) a.splice(i,1); });
+  if(tier){ const a=state.tiers[tier]; const i = (index==null||index<0||index>a.length) ? a.length : index; a.splice(i,0,id); }
+  render(); persist();
+}
+
+// ---------- helpers ----------
+function lum(hex){ const n=parseInt(String(hex).replace("#","").padEnd(6,"0").slice(0,6),16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)/255; }
+function fgFor(hex){ return lum(hex) > 0.62 ? "#15181c" : "#ffffff"; }
+let toastTimer;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2400); }
+
+// ---------- rendering ----------
+const boardEl = document.getElementById("board");
+const poolEl = document.getElementById("pool");
+const poolItems = document.getElementById("poolItems");
+const chipsEl = document.getElementById("chips");
+const countEl = document.getElementById("count");
+const searchEl = document.getElementById("search");
+let filter = "All", query = "", selectedId = null;
+
+function makeTile(s){
+  const el = document.createElement("div");
+  el.className = "tile" + (lum(s.c1)>0.62 ? " lightbg" : "") + (s.id===selectedId ? " selected" : "");
+  el.dataset.id = s.id; el.tabIndex = 0; el.setAttribute("role","button");
+  el.setAttribute("aria-label", s.name + ", " + s.conf + (tierOf(s.id) ? ", tier " + tierOf(s.id) : ", unranked"));
+  el.title = s.name;
+  el.style.setProperty("--c1", s.c1); el.style.setProperty("--c2", s.c2); el.style.setProperty("--fg", fgFor(s.c1));
+  const a = document.createElement("span"); a.className="abbr"; a.textContent = s.abbr;
+  const t = document.createElement("span"); t.className="tag"; t.textContent = s.conf;
+  el.append(a,t);
+  if(s.custom){ const d=document.createElement("button"); d.type="button"; d.className="del"; d.textContent="×"; d.setAttribute("aria-label","Delete "+s.name); d.tabIndex=-1; el.appendChild(d); }
+  return el;
+}
+
+function renderBoard(){
+  boardEl.textContent = "";
+  TIERS.forEach(x=>{
+    const row = document.createElement("div"); row.className="tier"; row.dataset.tier=x.k;
+    const lab = document.createElement("div"); lab.className="tier-label"; lab.style.background=x.c; lab.textContent=x.k; lab.dataset.tierLabel=x.k;
+    const items = document.createElement("div"); items.className="tier-items"; items.dataset.drop=x.k;
+    items.setAttribute("aria-label", "Tier " + x.k);
+    state.tiers[x.k].forEach(id=>{ const s=byId.get(id); if(s) items.appendChild(makeTile(s)); });
+    row.append(lab, items); boardEl.appendChild(row);
+  });
+}
+
+function renderChips(){
+  const ranked = new Set(TIERS.flatMap(x=>state.tiers[x.k]));
+  const groups = ["All", ...GROUPS]; if(state.custom.length) groups.push("Custom");
+  if(!groups.includes(filter)) filter="All";
+  chipsEl.textContent = "";
+  groups.forEach(g=>{
+    const n = schools.filter(s=>!ranked.has(s.id) && (g==="All"||s.group===g)).length;
+    const b = document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("aria-pressed", String(g===filter));
+    b.textContent = g; const sm=document.createElement("small"); sm.textContent=n; b.appendChild(sm);
+    b.addEventListener("click",()=>{ filter=g; render(); });
+    chipsEl.appendChild(b);
+  });
+}
+
+function renderPool(){
+  const ranked = new Set(TIERS.flatMap(x=>state.tiers[x.k]));
+  const q = query.trim().toLowerCase();
+  const list = schools.filter(s=>!ranked.has(s.id) && (filter==="All"||s.group===filter) &&
+    (!q || s.name.toLowerCase().includes(q) || s.abbr.toLowerCase().includes(q) || s.conf.toLowerCase().includes(q)));
+  poolItems.textContent = "";
+  list.forEach(s=>poolItems.appendChild(makeTile(s)));
+  if(!list.length){
+    const p=document.createElement("p"); p.className="empty";
+    p.textContent = ranked.size===schools.length ? "Every school is ranked. Download your list or add another school."
+      : "No unranked schools match. Clear the search or pick another conference.";
+    poolItems.appendChild(p);
+  }
+  countEl.textContent = `${ranked.size} of ${schools.length} ranked`;
+}
+
+function render(){ renderBoard(); renderChips(); renderPool(); }
+render();
+searchEl.addEventListener("input", ()=>{ query=searchEl.value; renderPool(); });
+
+// ---------- drag and drop (pointer based: mouse, pen, touch) ----------
+let drag = null, justDragged = false;
+const ph = document.createElement("div"); ph.className="placeholder";
+
+document.addEventListener("pointerdown", e=>{
+  if(e.pointerType==="mouse" && e.button!==0) return;
+  if(e.target.closest(".del")) return;
+  const tile = e.target.closest(".tile"); if(!tile || tile.classList.contains("ghost")) return;
+  drag = {id:tile.dataset.id, tile, sx:e.clientX, sy:e.clientY, x:e.clientX, y:e.clientY, active:false, touch:e.pointerType==="touch", pid:e.pointerId, zone:null, timer:null};
+  if(drag.touch){ drag.timer = setTimeout(()=>{ if(drag && !drag.active) startDrag(); }, 230); }
+});
+
+function startDrag(){
+  const d = drag; d.active = true;
+  try{ d.tile.releasePointerCapture(d.pid); }catch(e){}
+  const r = d.tile.getBoundingClientRect();
+  d.ox = d.x - r.left; d.oy = d.y - r.top;
+  const g = d.tile.cloneNode(true); g.classList.add("ghost"); g.classList.remove("selected");
+  g.style.width=r.width+"px"; g.style.height=r.height+"px";
+  document.body.appendChild(g); d.ghost = g;
+  ph.style.width=r.width+"px"; ph.style.height=r.height+"px";
+  d.tile.parentNode.insertBefore(ph, d.tile);
+  d.tile.classList.add("dragging");
+  document.body.classList.add("is-dragging");
+  setSelected(null, false);
+  if(navigator.vibrate && d.touch) try{navigator.vibrate(8);}catch(e){}
+  moveGhost(); updateTarget();
+}
+function moveGhost(){ const d=drag; d.ghost.style.transform=`translate(${d.x-d.ox}px, ${d.y-d.oy}px) rotate(-3deg) scale(1.06)`; }
+
+function zoneAt(x,y){
+  const el = document.elementFromPoint(x,y); if(!el) return null;
+  const lab = el.closest("[data-tier-label]");
+  if(lab) return boardEl.querySelector(`[data-drop="${lab.dataset.tierLabel}"]`);
+  const row = el.closest(".tier"); if(row) return row.querySelector(".tier-items");
+  if(el.closest("#pool")) return poolItems;
+  return null;
+}
+function updateTarget(){
+  const d = drag; const zone = zoneAt(d.x, d.y);
+  document.querySelectorAll(".tier.over,.pool.over").forEach(n=>n.classList.remove("over"));
+  d.zone = zone;
+  if(!zone){ ph.remove(); return; }
+  if(zone===poolItems){ poolEl.classList.add("over"); ph.remove(); return; }
+  zone.parentNode.classList.add("over");
+  const tiles = [...zone.children].filter(c=>c.classList.contains("tile") && c!==d.tile);
+  let before = null;
+  for(const t of tiles){ const r=t.getBoundingClientRect();
+    if(d.y < r.top){ before=t; break; }
+    if(d.y <= r.bottom && d.x < r.left + r.width/2){ before=t; break; } }
+  if(before){ if(ph.nextSibling!==before || ph.parentNode!==zone) zone.insertBefore(ph,before); }
+  else if(ph.parentNode!==zone || zone.lastElementChild!==ph) zone.appendChild(ph);
+}
+
+document.addEventListener("pointermove", e=>{
+  if(!drag || e.pointerId!==drag.pid) return;
+  drag.x=e.clientX; drag.y=e.clientY;
+  if(!drag.active){
+    const dist = Math.hypot(drag.x-drag.sx, drag.y-drag.sy);
+    if(drag.touch){ if(dist>10){ clearTimeout(drag.timer); drag=null; } }
+    else if(dist>5) startDrag();
+    return;
+  }
+  moveGhost(); updateTarget();
+  const edge=70; if(drag.y<edge) window.scrollBy(0,-14); else if(drag.y>innerHeight-edge) window.scrollBy(0,14);
+});
+document.addEventListener("touchmove", e=>{ if(drag && drag.active) e.preventDefault(); }, {passive:false});
+document.addEventListener("contextmenu", e=>{ if(e.target.closest(".tile")) e.preventDefault(); });
+
+function endDrag(commit){
+  const d = drag; drag = null; if(!d) return;
+  clearTimeout(d.timer);
+  if(!d.active) return;
+  justDragged = true; setTimeout(()=>justDragged=false, 0);
+  document.body.classList.remove("is-dragging");
+  d.ghost.remove();
+  document.querySelectorAll(".tier.over,.pool.over").forEach(n=>n.classList.remove("over"));
+  if(commit && d.zone){
+    if(d.zone===poolItems){ ph.remove(); moveTo(d.id, null); return; }
+    const kids = [...d.zone.children].filter(c=>c.classList.contains("tile") && c!==d.tile || c===ph);
+    const idx = kids.indexOf(ph);
+    ph.remove();
+    moveTo(d.id, d.zone.dataset.drop, idx);
+    return;
+  }
+  ph.remove(); d.tile.classList.remove("dragging");
+}
+document.addEventListener("pointerup", e=>{ if(drag && e.pointerId===drag.pid) endDrag(true); });
+document.addEventListener("pointercancel", e=>{ if(drag && e.pointerId===drag.pid) endDrag(false); });
+
+// ---------- tap to select, tap a tier to place ----------
+function setSelected(id, rerender=true){
+  selectedId = id;
+  document.querySelectorAll(".tile.selected").forEach(t=>t.classList.remove("selected"));
+  if(id){ const el=document.querySelector(`.tile[data-id="${id}"]:not(.ghost)`); if(el) el.classList.add("selected"); }
+}
+document.addEventListener("click", e=>{
+  if(justDragged) return;
+  const del = e.target.closest(".del");
+  if(del){ const id=del.closest(".tile").dataset.id; removeCustom(id); return; }
+  const tile = e.target.closest(".tile");
+  if(tile){ setSelected(selectedId===tile.dataset.id ? null : tile.dataset.id); return; }
+  if(!selectedId) return;
+  const lab = e.target.closest("[data-tier-label]");
+  const row = e.target.closest(".tier");
+  if(lab || row){ const id=selectedId; selectedId=null; moveTo(id, (lab ? lab.dataset.tierLabel : row.dataset.tier)); return; }
+  if(e.target.closest("#poolItems")){ const id=selectedId; selectedId=null; moveTo(id,null); return; }
+});
+
+// keyboard placement
+document.addEventListener("keydown", e=>{
+  const tile = e.target.closest && e.target.closest(".tile"); if(!tile || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toUpperCase(); const id = tile.dataset.id;
+  let target;
+  if(TIERS.some(x=>x.k===k)) target = k;
+  else if(e.key==="0" || e.key==="Delete" || e.key==="Backspace") target = null;
+  else if(e.key==="Enter" || e.key===" "){ e.preventDefault(); setSelected(selectedId===id?null:id); return; }
+  else return;
+  e.preventDefault(); selectedId=null; moveTo(id, target);
+  const again = document.querySelector(`.tile[data-id="${id}"]`); if(again) again.focus();
+  toast(target ? `${byId.get(id).name} placed in ${target}` : `${byId.get(id).name} back in the pool`);
+});
+
+// ---------- custom schools ----------
+const addDialog = document.getElementById("addDialog"), addForm=document.getElementById("addForm");
+const fName=document.getElementById("fName"), fAbbr=document.getElementById("fAbbr"), fConf=document.getElementById("fConf"),
+      fC1=document.getElementById("fC1"), fC2=document.getElementById("fC2"), addErr=document.getElementById("addErr"),
+      preview=document.getElementById("preview");
+function updatePreview(){
+  preview.textContent="";
+  preview.appendChild(makeTile({id:"preview", abbr:(fAbbr.value||"ABC").toUpperCase(), name:fName.value||"New school", conf:fConf.value.trim()||"Custom", c1:fC1.value, c2:fC2.value, custom:false}));
+  preview.firstChild.style.cursor="default"; preview.firstChild.tabIndex=-1;
+}
+[fName,fAbbr,fConf,fC1,fC2].forEach(i=>i.addEventListener("input",updatePreview));
+document.getElementById("addBtn").addEventListener("click",()=>{ addForm.reset(); addErr.textContent=""; updatePreview(); addDialog.showModal(); fName.focus(); });
+document.getElementById("addCancel").addEventListener("click",()=>addDialog.close());
+addForm.addEventListener("submit", e=>{
+  e.preventDefault();
+  const name=fName.value.trim(), abbr=fAbbr.value.trim().toUpperCase(), conf=fConf.value.trim()||"Custom";
+  if(!name){ addErr.textContent="Enter the school's name."; fName.focus(); return; }
+  if(!abbr){ addErr.textContent="Enter a short name, up to 6 letters."; fAbbr.focus(); return; }
+  if(schools.some(s=>s.name.toLowerCase()===name.toLowerCase())){ addErr.textContent=`${name} is already on the list.`; return; }
+  state.custom.push({id:"c-"+Date.now().toString(36), name, abbr, conf, c1:fC1.value, c2:fC2.value});
+  rebuildSchools(); filter="All"; render(); persist(); addDialog.close(); toast(`${name} added to the pool`);
+});
+function removeCustom(id){
+  const s = byId.get(id); if(!s || !s.custom) return;
+  state.custom = state.custom.filter(c=>c.id!==id);
+  TIERS.forEach(x=>{ state.tiers[x.k]=state.tiers[x.k].filter(v=>v!==id); });
+  if(selectedId===id) selectedId=null;
+  rebuildSchools(); render(); persist(); toast(`${s.name} deleted`);
+}
+
+// ---------- reset ----------
+const resetDialog=document.getElementById("resetDialog");
+document.getElementById("resetBtn").addEventListener("click",()=>resetDialog.showModal());
+document.getElementById("resetCancel").addEventListener("click",()=>resetDialog.close());
+document.getElementById("resetConfirm").addEventListener("click",()=>{
+  TIERS.forEach(x=>state.tiers[x.k]=[]); selectedId=null; render(); persist(); resetDialog.close(); toast("Rankings reset");
+});
+
+// ---------- image export ----------
+let downloads; // undefined = pending/standalone, null = unavailable, object = platform downloads
+if(window.claude && typeof window.claude.use==="function"){
+  window.claude.use("downloads").then(d=>{ downloads = d; }).catch(()=>{ downloads = null; });
+} else { downloads = "anchor"; }
+
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function fitText(ctx, text, maxW, size, family){ let s=size; do{ ctx.font=`${s}px ${family}`; s-=1; } while(ctx.measureText(text).width>maxW && s>7); }
+
+async function buildImage(){
+  try{ await Promise.all([document.fonts.load('30px "Graduate"'), document.fonts.load('600 12px "Barlow"')]); }catch(e){}
+  const W=1200, pad=32, label=110, tile=84, gap=8, headH=100, scale=2;
+  const inner = W - pad*2 - label - gap*2;
+  const perLine = Math.max(1, Math.floor((inner + gap)/(tile+gap)));
+  const rows = TIERS.map(x=>{ const n=state.tiers[x.k].length; const lines=Math.max(1,Math.ceil(n/perLine)); return {x, h: lines*(tile+gap)+gap}; });
+  const boardH = rows.reduce((a,r)=>a+r.h,0) + (rows.length+1)*6;
+  const H = headH + boardH + pad + 30;
+  const c=document.createElement("canvas"); c.width=W*scale; c.height=H*scale;
+  const ctx=c.getContext("2d"); ctx.scale(scale,scale);
+  ctx.fillStyle="#12161c"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#ffffff"; ctx.font='44px "Graduate", Georgia, serif'; ctx.textBaseline="alphabetic"; ctx.fillText("My college tier list", pad, 62);
+  const ranked = TIERS.reduce((a,x)=>a+state.tiers[x.k].length,0);
+  ctx.fillStyle="#9aa6b4"; ctx.font='500 16px "Barlow", Arial, sans-serif'; ctx.fillText(`${ranked} schools ranked`, pad, 88);
+  let y = headH;
+  ctx.fillStyle="#1b2028"; rr(ctx,pad-6,y-6,W-pad*2+12,boardH,10); ctx.fill();
+  rows.forEach(r=>{
+    ctx.fillStyle="#262c36"; rr(ctx,pad,y,W-pad*2,r.h,6); ctx.fill();
+    ctx.save(); rr(ctx,pad,y,W-pad*2,r.h,6); ctx.clip(); ctx.fillStyle=r.x.c; ctx.fillRect(pad,y,label,r.h); ctx.restore();
+    ctx.fillStyle="#1a1a1a"; ctx.font='46px "Graduate", Georgia, serif'; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(r.x.k, pad+label/2, y+r.h/2+2);
+    state.tiers[r.x.k].forEach((id,i)=>{
+      const s=byId.get(id); if(!s) return;
+      const tx = pad+label+gap + (i%perLine)*(tile+gap), ty = y+gap + Math.floor(i/perLine)*(tile+gap);
+      ctx.save(); rr(ctx,tx,ty,tile,tile,6); ctx.clip();
+      ctx.fillStyle=s.c1; ctx.fillRect(tx,ty,tile,tile); ctx.fillStyle=s.c2; ctx.fillRect(tx,ty+tile-6,tile,6); ctx.restore();
+      const fg=fgFor(s.c1); ctx.fillStyle=fg; ctx.textAlign="center"; ctx.textBaseline="middle";
+      fitText(ctx, s.abbr, tile-10, 18, '"Graduate", Georgia, serif'); ctx.fillText(s.abbr, tx+tile/2, ty+tile/2-8);
+      fitText(ctx, s.conf, tile-14, 11, '"Barlow", Arial, sans-serif');
+      ctx.font = "600 " + ctx.font;
+      const tw=Math.min(ctx.measureText(s.conf).width+10, tile-8);
+      ctx.fillStyle = lum(s.c1)>0.62 ? "rgba(255,255,255,.5)" : "rgba(0,0,0,.28)"; rr(ctx,tx+tile/2-tw/2,ty+tile/2+9,tw,16,3); ctx.fill();
+      ctx.fillStyle=fg; ctx.fillText(s.conf, tx+tile/2, ty+tile/2+17.5, tile-12);
+    });
+    y += r.h + 6;
+  });
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#6c7684"; ctx.font='500 13px "Barlow", Arial, sans-serif';
+  ctx.fillText(new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}), pad, H-18);
+  return c;
+}
+
+const dlBtn = document.getElementById("dlBtn");
+dlBtn.addEventListener("click", async ()=>{
+  if(!TIERS.some(x=>state.tiers[x.k].length)){ toast("Place at least one school in a tier first"); return; }
+  dlBtn.disabled = true; const label = dlBtn.textContent; dlBtn.textContent = "Preparing…";
+  try{
+    const canvas = await buildImage();
+    const blob = await new Promise(res=>canvas.toBlob(res,"image/png"));
+    if(downloads && downloads!=="anchor"){
+      try{ await downloads.save({filename:"college-tier-list.png", data:blob}); toast("Image downloaded"); }
+      catch(err){ const code = err && err.code;
+        if(code==="declined") toast("Download canceled");
+        else if(code==="rate_limited") toast("A download prompt is already open");
+        else showImage(canvas); }
+    } else if(downloads==="anchor"){
+      const url = URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="college-tier-list.png";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 4000); toast("Image downloaded");
+    } else { showImage(canvas); }
+  }catch(e){ toast("Couldn't build the image. Try again."); }
+  finally{ dlBtn.disabled=false; dlBtn.textContent=label; }
+});
+const imgDialog=document.getElementById("imgDialog");
+function showImage(canvas){ document.getElementById("imgOut").src = canvas.toDataURL("image/png"); imgDialog.showModal(); }
+document.getElementById("imgClose").addEventListener("click",()=>imgDialog.close());
+
+})();
+</script>
+</body>
+</html>
