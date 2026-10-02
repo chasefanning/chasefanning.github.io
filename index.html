@@ -107,7 +107,11 @@ input[type=color]{width:100%;height:40px;border:1px solid var(--line);border-rad
 
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;transition:opacity .2s,transform .2s;pointer-events:none;z-index:60;max-width:90vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
+/* Footer */
+.site-footer{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:.92rem}
+.site-footer img{width:56px;height:56px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--panel);border:2px solid var(--line)}
+.site-footer p{margin:0;line-height:1.35}
+.site-footer strong{display:block;color:var(--ink);font-family:var(--display);font-weight:400;font-size:1.1rem}
 @media (max-width:640px){
   :root{--tile:62px}
   .wrap{padding:18px 12px 48px}
@@ -147,6 +151,11 @@ input[type=color]{width:100%;height:40px;border:1px solid var(--line);border-rad
     <div class="pool-items" id="poolItems" data-drop="pool"></div>
     <p class="hint">On a phone, press and hold a school to drag it, or tap a school and then tap a tier. With a keyboard, focus a school and press <kbd>S</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> or <kbd>F</kbd> to place it, or <kbd>0</kbd> to send it back.</p>
   </section>
+    <footer class="site-footer">
+    <!-- TODO: replace with the real photo filename (keep it in the same folder as this page) -->
+    <img src="photo of me.jpg" alt="Chase Fanning" width="56" height="56">
+    <p><strong>Made by Chase Fanning</strong>Product of Sandi Fanning</p>
+  </footer>
 </div>
 
 <dialog id="addDialog">
